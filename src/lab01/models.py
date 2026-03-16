@@ -1,204 +1,136 @@
 from datetime import datetime
-from enums import BusStatus, TicketStatus
 from validators import *
 
-class Driver:
-    _total = 0
-    
-    def __init__(self, name, license_num, experience, category):
-        validate_driver(name, license_num, experience, category)
-        self._name = name
-        self._license = license_num
-        self._exp = experience
-        self._cat = category
-        Driver._total += 1
-    
-    @property
-    def name(self): return self._name
-    @property
-    def license(self): return self._license
-    @property
-    def experience(self): return self._exp
-    @experience.setter
-    def experience(self, value):
-        validate_experience(value)
-        self._exp = value
-    
-    def __str__(self):
-        return f"👨‍✈️ {self._name} | Стаж: {self._exp} | Кат. {self._cat}"
-    
-    def __repr__(self):
-        return f"Driver('{self._name}', '{self._license}', {self._exp}, '{self._cat}')"
-    
-    def __eq__(self, other):
-        return isinstance(other, Driver) and self._license == other._license
-
-class Route:
-    _total = 0
-    
-    def __init__(self, number, start, end, distance, duration):
-        validate_route(number, start, end, distance, duration)
-        self._num = number
-        self._start = start
-        self._end = end
-        self._dist = distance
-        self._dur = duration
-        Route._total += 1
-    
-    @property
-    def number(self): return self._num
-    @property
-    def start(self): return self._start
-    @property
-    def end(self): return self._end
-    @property
-    def distance(self): return self._dist
-    @property
-    def duration(self): return self._dur
-    
-    def __str__(self):
-        return f"🛣️ №{self._num} | {self._start}→{self._end} | {self._dist}км | {self._dur}мин"
-    
-    def __repr__(self):
-        return f"Route({self._num}, '{self._start}', '{self._end}', {self._dist}, {self._dur})"
-    
-    def __eq__(self, other):
-        return isinstance(other, Route) and self._num == other._num
-
 class Bus:
-    _total = 0
+    """Класс Автобус"""
+    
+    _total_buses = 0
     _MAX_SPEED = 100
     
-    def __init__(self, bus_id, capacity, route=None, driver=None, 
-                 speed=0, status=BusStatus.ON_PARKING):
-        validate_bus(bus_id, capacity, speed, status)
+    def __init__(self, bus_id, capacity, route_number=None, driver_name=None, 
+                 current_speed=0, status=BusStatus.ON_PARKING):
+        validate_bus_id(bus_id)
+        validate_capacity(capacity)
+        validate_speed(current_speed)
+        validate_status(status)
+        
         self._id = bus_id
-        self._cap = capacity
-        self._route = route
-        self._driver = driver
-        self._speed = speed
+        self._capacity = capacity
+        self._route_number = route_number
+        self._driver_name = driver_name
+        self._speed = current_speed
         self._status = status
-        self._last_to = datetime.now()
-        Bus._total += 1
+        self._last_maintenance = datetime.now()
+        
+        Bus._total_buses += 1
+
+    @property
+    def bus_id(self):
+        return self._id
     
     @property
-    def bus_id(self): return self._id
+    def capacity(self):
+        return self._capacity
+    
     @property
-    def capacity(self): return self._cap
-    @property
-    def route(self): return self._route
-    @route.setter
-    def route(self, value):
+    def route_number(self):
+        return self._route_number
+    
+    @route_number.setter
+    def route_number(self, value):
         if self._status == BusStatus.ON_ROUTE:
-            raise ValueError("Нельзя сменить маршрут в пути")
-        self._route = value
+            raise ValueError("Нельзя сменить маршрут во время движения")
+        self._route_number = value
     
     @property
-    def driver(self): return self._driver
-    @driver.setter
-    def driver(self, value): self._driver = value
+    def driver_name(self):
+        return self._driver_name
+    
+    @driver_name.setter
+    def driver_name(self, value):
+        self._driver_name = value
     
     @property
-    def speed(self): return self._speed
+    def speed(self):
+        return self._speed
+    
     @speed.setter
     def speed(self, value):
         validate_speed(value)
         if self._status == BusStatus.MAINTENANCE:
-            raise ValueError("На ТО скорость не меняется")
+            raise ValueError("На обслуживании скорость не меняется")
         if self._status == BusStatus.ON_PARKING and value > 0:
-            raise ValueError("На парковке скорость = 0")
+            raise ValueError("На парковке скорость должна быть 0")
         self._speed = value
     
     @property
-    def status(self): return self._status
+    def status(self):
+        return self._status
+    
+    @property
+    def is_broken(self):
+        """Логическое состояние (нуждается в ТО)"""
+        days_since = (datetime.now() - self._last_maintenance).days
+        return days_since > 30
     
     def start_route(self):
         if self._status != BusStatus.ON_PARKING:
             raise ValueError("Автобус должен быть на парковке")
-        if not self._route:
+        if not self._route_number:
             raise ValueError("Не назначен маршрут")
+        
         self._status = BusStatus.ON_ROUTE
         self._speed = 30
-        return f"🚌 {self._id} выехал на маршрут"
+        return f"Автобус {self._id} выехал на маршрут №{self._route_number}"
     
     def park(self):
         if self._speed > 0:
-            raise ValueError("Сначала остановитесь")
+            raise ValueError("Сначала остановите автобус")
         self._status = BusStatus.ON_PARKING
-        return f"{self._id} на парковке"
+        return f"Автобус {self._id} на парковке"
     
     def send_to_maintenance(self):
         self._status = BusStatus.MAINTENANCE
         self._speed = 0
-        self._last_to = datetime.now()
-        return f"{self._id} на ТО"
+        self._last_maintenance = datetime.now()
+        return f"Автобус {self._id} на обслуживании"
     
-    def accelerate(self, inc):
+    def accelerate(self, increment):
         if self._status != BusStatus.ON_ROUTE:
-            raise ValueError("Ускорение только на маршруте")
-        new = self._speed + inc
-        validate_speed(new)
-        self._speed = new
+            raise ValueError("Ускоряться можно только на маршруте")
+        
+        new_speed = self._speed + increment
+        validate_speed(new_speed)
+        self._speed = new_speed
         return self._speed
     
-    def brake(self, dec):
+    def brake(self, decrement):
         if self._status == BusStatus.MAINTENANCE:
-            raise ValueError("На ТО нельзя тормозить")
-        self._speed = max(0, self._speed - dec)
+            raise ValueError("На обслуживании нельзя тормозить")
+        
+        self._speed = max(0, self._speed - decrement)
         return self._speed
     
-    def needs_maintenance(self):
-        return (datetime.now() - self._last_to).days > 30
-    
     def __str__(self):
-        days = (datetime.now() - self._last_to).days
-        return f"🚌 {self._id} | Скорость: {self._speed} | {self._status.value} | ТО: {days}дн"
+        route = f"№{self._route_number}" if self._route_number else "не назначен"
+        driver = self._driver_name if self._driver_name else "нет"
+        days = (datetime.now() - self._last_maintenance).days
+        status_emoji = "🟢" if self._status == BusStatus.ON_ROUTE else "🅿️" if self._status == BusStatus.ON_PARKING else "🔧"
+        
+        return (f"{status_emoji} Автобус: {self._id}\n"
+                f"   Вместимость: {self._capacity} чел.\n"
+                f"   Маршрут: {route}\n"
+                f"   Водитель: {driver}\n"
+                f"   Скорость: {self._speed} км/ч\n"
+                f"   Состояние: {self._status.value}\n"
+                f"   Последнее ТО: {days} дн. назад")
     
     def __repr__(self):
-        return f"Bus('{self._id}', {self._cap}, {self._speed}, {self._status})"
+        return (f"Bus(bus_id='{self._id}', capacity={self._capacity}, "
+                f"route='{self._route_number}', driver='{self._driver_name}', "
+                f"speed={self._speed}, status={self._status})")
     
     def __eq__(self, other):
-        return isinstance(other, Bus) and self._id == other._id
-
-class Ticket:
-    _total = 0
-    
-    def __init__(self, ticket_id, route, price, seat=None, status=TicketStatus.AVAILABLE):
-        validate_ticket(ticket_id, price, status)
-        self._id = ticket_id
-        self._route = route
-        self._price = price
-        self._seat = seat
-        self._status = status
-        Ticket._total += 1
-    
-    @property
-    def ticket_id(self): return self._id
-    @property
-    def route(self): return self._route
-    @property
-    def price(self): return self._price
-    @property
-    def status(self): return self._status
-    
-    def buy(self):
-        if self._status != TicketStatus.AVAILABLE:
-            raise ValueError(f"Билет {self._status.value}")
-        self._status = TicketStatus.SOLD
-        return f"🎫 {self._id} куплен за {self._price} руб."
-    
-    def use(self):
-        if self._status != TicketStatus.SOLD:
-            raise ValueError("Можно использовать только купленный билет")
-        self._status = TicketStatus.USED
-        return f"🎫 {self._id} использован"
-    
-    def __str__(self):
-        seat = f"место {self._seat}" if self._seat else "без места"
-        return f"🎫 {self._id} | Маршрут {self._route.number} | {self._price}руб | {seat} | {self._status.value}"
-    
-    def __repr__(self):
-        return f"Ticket('{self._id}', {self._route.number}, {self._price}, {self._status})"
-    
-    def __eq__(self, other):
-        return isinstance(other, Ticket) and self._id == other._id
+        if not isinstance(other, Bus):
+            return False
+        return self._id == other._id

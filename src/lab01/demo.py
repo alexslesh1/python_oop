@@ -1,92 +1,87 @@
-from models import Driver, Route, Bus, Ticket
-from enums import BusStatus, TicketStatus
+from models import Bus
+from datetime import datetime
 
-def header(text): print(f"\n{'='*60}\n{text}\n{'='*60}")
-def scene(num, title): print(f"\n{'-'*40}\n{num}. {title}\n{'-'*40}")
+def print_header(text):
+    print(f"\n{'='*60}")
+    print(f" {text}")
+    print(f"{'='*60}")
 
-d = Driver("Иванов Петр", "77АА123456", 15, "D")
-r = Route(15, "Вокзал", "Аэропорт", 25, 45)
-b = Bus("А123ВС", 50, r, d)
-t1, t2 = Ticket("T001", r, 500, "A1"), Ticket("T002", r, 500, "A2")
+def print_scenario(num, title):
+    print(f"\n{'-'*50}")
+    print(f" СЦЕНАРИЙ {num}: {title}")
+    print(f"{'-'*50}")
 
-header("ТРАНСПОРТНАЯ СИСТЕМА")
-print(f"Всего: Drivers {Driver._total}, Routes {Route._total}, "
-      f"Buses {Bus._total}, Tickets {Ticket._total}")
+print_header("ЛАБОРАТОРНАЯ РАБОТА №1 - КЛАСС BUS")
 
-scene(1, "ОРГАНИЗАЦИЯ ПЕРЕВОЗКИ")
-print(d, r, b, t1, sep="\n")
+print_scenario(1, "Создание и нормальная работа")
 
-print("\n🚌 Работа автобуса:")
-print(b.start_route())
-print(f"Ускорение: {b.accelerate(20)} км/ч")
-print(f"Торможение: {b.brake(25)} км/ч")
+bus1 = Bus("А123ВС", 50, 15, "Иванов")
+bus2 = Bus("В456СМ", 40, 22, "Петров")
 
-print("\n🎫 Продажа билетов:")
-print(t1.buy())
-print(t2.buy())
+print(f"Создано автобусов: {Bus._total_buses}")
+print("\nИнформация об автобусах:")
+print(bus1)
+print()
+print(bus2)
 
-print("\n🔍 Сравнение:")
-b2 = Bus("В456СМ", 40)
-print(f"b1 == b2: {b == b2}")
-print(f"t1 == t2: {t1 == t2}")
+print("\nВыезд на маршрут:")
+print(bus1.start_route())
 
-scene(2, "ПРОВЕРКА ВАЛИДАЦИИ")
+print("\nУскорение:")
+print(f"Скорость после ускорения на 20: {bus1.accelerate(20)} км/ч")
+print(f"Скорость после ускорения на 15: {bus1.accelerate(15)} км/ч")
 
-tests = [
-    ("Водитель со стажем -5", lambda: Driver("Сидоров", "77ББ789", -5, "D")),
-    ("Маршрут с нулевым расстоянием", lambda: Route(25, "A", "B", 0, 30)),
-    ("Автобус со скоростью 150", lambda: Bus("С789ОР", 40, speed=150)),
-    ("Билет с ценой -100", lambda: Ticket("T003", r, -100))
-]
+print("\nТорможение до полной остановки:")
+print(f"Скорость после торможения на 25: {bus1.brake(25)} км/ч")
+print(f"Скорость после торможения на 40: {bus1.brake(40)} км/ч")
 
-for desc, test in tests:
-    try:
-        test()
-        print(f"❌ {desc}: ДОЛЖНО БЫТЬ ОШИБКА")
-    except Exception as e:
-        print(f"✅ {desc}: {e}")
+print("\nПарковка:")
+print(bus1.park())
 
-print("\n🔄 Работа сеттера:")
-print(f"Стаж до: {d.experience}")
-d.experience = 16
-print(f"Стаж после: {d.experience}")
+print("\nСравнение объектов:")
+print(f"bus1 == bus2: {bus1 == bus2}")
+print(f"bus1 == bus1: {bus1 == bus1}")
 
-scene(3, "ПОВЕДЕНИЕ ОТ СОСТОЯНИЯ")
+print_scenario(2, "Валидация и состояния")
 
-b3 = Bus("D001", 45, r)  
-print(f"\n🚌 Начальное: {b3.status.value}")
-
+print("Попытка создать автобус с неверными данными:")
 try:
-    b3.accelerate(10)
-except Exception as e:
-    print(f"❌ Ускорение на парковке: {e}")
+    bus_invalid = Bus("", -5, current_speed=150)
+except ValueError as e:
+    print(f"   Ошибка: {e}")
 
-print(b3.start_route())
-print(b3.send_to_maintenance())
+print("\nРабота сеттера:")
+print(f"Старый маршрут bus2: {bus2.route_number}")
+bus2.route_number = 25
+print(f"Новый маршрут: {bus2.route_number}")
 
+bus3 = Bus("С789ОР", 45)
+print(f"\nНачальное состояние bus3: {bus3.status.value}")
+
+print("\nПопытка ускориться на парковке:")
 try:
-    b3.speed = 20
-except Exception as e:
-    print(f"❌ Изменение скорости на ТО: {e}")
+    bus3.accelerate(10)
+except ValueError as e:
+    print(f"   Ошибка: {e}")
 
-t3 = Ticket("T999", r, 750)
-print(f"\n🎫 Начальное: {t3.status.value}")
-print(t3.buy())
+print("\nОтправка на ТО:")
+print(bus3.send_to_maintenance())
 
+print("\nПопытка изменить скорость на ТО:")
 try:
-    t3.buy()
-except Exception as e:
-    print(f"❌ Повторная покупка: {e}")
+    bus3.speed = 20
+except ValueError as e:
+    print(f"   Ошибка: {e}")
 
-print(t3.use())
+print("\nПроверка логического состояния (is_broken):")
+bus4 = Bus("D001", 50, 10, "Сидоров")
+bus4._last_maintenance = datetime(2024, 1, 1)
+print(bus4)
+print(f"Требуется ТО? {bus4.is_broken}")
 
-try:
-    t3.use()
-except Exception as e:
-    print(f"❌ Повторное использование: {e}")
-
-print(f"\n🔧 Нужно ТО? {b3.needs_maintenance()}")
-print(f"\nРепрезентация: {repr(b)}")
+print_header("ИТОГ")
+print(f"Всего создано автобусов: {Bus._total_buses}")
+print(f"Максимальная скорость: {Bus._MAX_SPEED} км/ч")
+print(f"\nПример repr:")
+print(repr(bus1))
 print('='*60)
-
-
