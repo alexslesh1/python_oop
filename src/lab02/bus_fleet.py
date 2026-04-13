@@ -1,8 +1,10 @@
-
+# Добавить в начало файла bus_fleet.py
 import sys
 import os
 
+# Добавляем путь к lab01 и lab03
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'lab01'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'lab03'))
 
 from models import Bus
 
@@ -162,7 +164,7 @@ class BusFleet:
             result += f"  [{i}] {bus.bus_id} | маршрут {bus.route_number} | {bus.speed} км/ч | {bus.status.value}\n"
         return result
     
-    def __repr__(self):
+    def __repr__(self): #для вывода 
         return f"BusFleet({len(self._items)} items)"
     
     def __contains__(self, bus):
